@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Degree {
+  id        String    @id @db.VarChar(36)
+  fullName  String    @db.VarChar(100)
+  shortName String    @unique @db.VarChar(5)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  teachers  Teacher[]
+}
+
+model Department {
+  id          String    @id @db.VarChar(36)
+  fullName    String    @db.VarChar(100)
+  shortName   String    @unique @db.VarChar(50)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  teachers    Teacher[]
+}
+
+model Teacher {
+  id           String     @id @db.VarChar(36)
+  code         String     @unique @db.VarChar(20)
+  fullName     String     @db.VarChar(100)
+  dateOfBirth  DateTime   @db.Date
+  phone        String?    @db.VarChar(20)
+  email        String?    @db.VarChar(100)
+  department   Department @relation(fields: [departmentId], references: [id])
+  departmentId String     @db.VarChar(36)
+  degree       Degree     @relation(fields: [degreeId], references: [id])
+  degreeId     String     @db.VarChar(36)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
