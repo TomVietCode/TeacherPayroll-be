@@ -6,6 +6,11 @@ import {
   exportAgeStatisticsToExcel,
   exportSummaryStatisticsToExcel
 } from '../helpers/excelExport.js';
+import { 
+  calculateTeachersByDepartment, 
+  calculateTeachersByDegree, 
+  calculateTeachersByAge 
+} from '../helpers/calculateStatistics.js';
 
 const prisma = new PrismaClient();
 
@@ -44,38 +49,24 @@ const groupTeachersByAgeRange = (teachers) => {
 // [GET] /api/statistics/by-department
 export const getTeachersByDepartment = async (req, res, next) => {
   try {
-    // Check if there are any teachers
-    const teacherCount = await prisma.teacher.count();
-    
-    if (teacherCount === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Get all departments with their teacher count
+    // Get all departments
     const departments = await prisma.department.findMany({
+      orderBy: { fullName: 'asc' }
+    });
+    
+    // Get all teachers with department information
+    const teachers = await prisma.teacher.findMany({
       include: {
-        _count: {
-          select: { teachers: true }
-        }
-      },
-      orderBy: {
-        fullName: 'asc'
+        department: true
       }
     });
     
-    // Format the data for frontend
-    const statistics = departments.map(dept => ({
-      id: dept.id,
-      label: dept.fullName,
-      shortName: dept.shortName,
-      count: dept._count.teachers
-    }));
+    // Calculate statistics
+    const stats = calculateTeachersByDepartment(teachers, departments);
     
     res.json({ 
-      data: statistics,
-      total: teacherCount
+      data: stats,
+      total: teachers.length
     });
   } catch (error) {
     next(error);
@@ -85,44 +76,7 @@ export const getTeachersByDepartment = async (req, res, next) => {
 // [GET] /api/statistics/by-department/export
 export const exportTeachersByDepartment = async (req, res, next) => {
   try {
-    // Check if there are any teachers
-    const teacherCount = await prisma.teacher.count();
-    
-    if (teacherCount === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Get all departments with their teacher count
-    const departments = await prisma.department.findMany({
-      include: {
-        _count: {
-          select: { teachers: true }
-        }
-      },
-      orderBy: {
-        fullName: 'asc'
-      }
-    });
-    
-    // Format the data for Excel
-    const statistics = departments.map(dept => ({
-      id: dept.id,
-      label: dept.fullName,
-      shortName: dept.shortName,
-      count: dept._count.teachers
-    }));
-    
-    // Generate Excel file
-    const buffer = await exportDepartmentStatisticsToExcel(statistics, teacherCount);
-    
-    // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=thong-ke-theo-khoa.xlsx');
-    
-    // Send the buffer
-    res.send(buffer);
+    res.status(501).json({ message: 'Not implemented yet' });
   } catch (error) {
     next(error);
   }
@@ -131,38 +85,24 @@ export const exportTeachersByDepartment = async (req, res, next) => {
 // [GET] /api/statistics/by-degree
 export const getTeachersByDegree = async (req, res, next) => {
   try {
-    // Check if there are any teachers
-    const teacherCount = await prisma.teacher.count();
-    
-    if (teacherCount === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Get all degrees with their teacher count
+    // Get all degrees
     const degrees = await prisma.degree.findMany({
+      orderBy: { fullName: 'asc' }
+    });
+    
+    // Get all teachers with degree information
+    const teachers = await prisma.teacher.findMany({
       include: {
-        _count: {
-          select: { teachers: true }
-        }
-      },
-      orderBy: {
-        fullName: 'asc'
+        degree: true
       }
     });
     
-    // Format the data for frontend
-    const statistics = degrees.map(degree => ({
-      id: degree.id,
-      label: degree.fullName,
-      shortName: degree.shortName,
-      count: degree._count.teachers
-    }));
+    // Calculate statistics
+    const stats = calculateTeachersByDegree(teachers, degrees);
     
     res.json({ 
-      data: statistics,
-      total: teacherCount
+      data: stats,
+      total: teachers.length
     });
   } catch (error) {
     next(error);
@@ -172,44 +112,7 @@ export const getTeachersByDegree = async (req, res, next) => {
 // [GET] /api/statistics/by-degree/export
 export const exportTeachersByDegree = async (req, res, next) => {
   try {
-    // Check if there are any teachers
-    const teacherCount = await prisma.teacher.count();
-    
-    if (teacherCount === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Get all degrees with their teacher count
-    const degrees = await prisma.degree.findMany({
-      include: {
-        _count: {
-          select: { teachers: true }
-        }
-      },
-      orderBy: {
-        fullName: 'asc'
-      }
-    });
-    
-    // Format the data for Excel
-    const statistics = degrees.map(degree => ({
-      id: degree.id,
-      label: degree.fullName,
-      shortName: degree.shortName,
-      count: degree._count.teachers
-    }));
-    
-    // Generate Excel file
-    const buffer = await exportDegreeStatisticsToExcel(statistics, teacherCount);
-    
-    // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=thong-ke-theo-bang-cap.xlsx');
-    
-    // Send the buffer
-    res.send(buffer);
+    res.status(501).json({ message: 'Not implemented yet' });
   } catch (error) {
     next(error);
   }
@@ -218,24 +121,14 @@ export const exportTeachersByDegree = async (req, res, next) => {
 // [GET] /api/statistics/by-age
 export const getTeachersByAge = async (req, res, next) => {
   try {
-    // Get all teachers with their date of birth
-    const teachers = await prisma.teacher.findMany({
-      select: {
-        dateOfBirth: true
-      }
-    });
+    // Get all teachers
+    const teachers = await prisma.teacher.findMany();
     
-    if (teachers.length === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Group teachers by age range
-    const statistics = groupTeachersByAgeRange(teachers);
+    // Calculate statistics
+    const stats = calculateTeachersByAge(teachers);
     
     res.json({ 
-      data: statistics,
+      data: stats,
       total: teachers.length
     });
   } catch (error) {
@@ -246,31 +139,7 @@ export const getTeachersByAge = async (req, res, next) => {
 // [GET] /api/statistics/by-age/export
 export const exportTeachersByAge = async (req, res, next) => {
   try {
-    // Get all teachers with their date of birth
-    const teachers = await prisma.teacher.findMany({
-      select: {
-        dateOfBirth: true
-      }
-    });
-    
-    if (teachers.length === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Group teachers by age range
-    const statistics = groupTeachersByAgeRange(teachers);
-    
-    // Generate Excel file
-    const buffer = await exportAgeStatisticsToExcel(statistics, teachers.length);
-    
-    // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=thong-ke-theo-do-tuoi.xlsx');
-    
-    // Send the buffer
-    res.send(buffer);
+    res.status(501).json({ message: 'Not implemented yet' });
   } catch (error) {
     next(error);
   }
@@ -279,25 +148,14 @@ export const exportTeachersByAge = async (req, res, next) => {
 // [GET] /api/statistics/summary
 export const getStatisticsSummary = async (req, res, next) => {
   try {
-    // Get counts for teachers, departments, and degrees
-    const [teacherCount, departmentCount, degreeCount] = await Promise.all([
-      prisma.teacher.count(),
-      prisma.department.count(),
-      prisma.degree.count()
-    ]);
+    // Get counts
+    const teacherCount = await prisma.teacher.count();
+    const departmentCount = await prisma.department.count();
+    const degreeCount = await prisma.degree.count();
     
-    if (teacherCount === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Get statistics on teachers by department
+    // Get department stats
     const departmentStats = await prisma.department.findMany({
-      select: {
-        id: true,
-        fullName: true,
-        shortName: true,
+      include: {
         _count: {
           select: { teachers: true }
         }
@@ -307,12 +165,9 @@ export const getStatisticsSummary = async (req, res, next) => {
       }
     });
     
-    // Get statistics on teachers by degree
+    // Get degree stats
     const degreeStats = await prisma.degree.findMany({
-      select: {
-        id: true,
-        fullName: true,
-        shortName: true,
+      include: {
         _count: {
           select: { teachers: true }
         }
@@ -322,14 +177,9 @@ export const getStatisticsSummary = async (req, res, next) => {
       }
     });
     
-    // Get all teachers for age stats
-    const teachers = await prisma.teacher.findMany({
-      select: {
-        dateOfBirth: true
-      }
-    });
-    
-    const ageStats = groupTeachersByAgeRange(teachers);
+    // Get teachers for age stats
+    const teachers = await prisma.teacher.findMany();
+    const ageStats = calculateTeachersByAge(teachers);
     
     res.json({
       data: {
@@ -340,13 +190,13 @@ export const getStatisticsSummary = async (req, res, next) => {
         },
         byDepartment: departmentStats.map(dept => ({
           id: dept.id,
-          label: dept.fullName,
+          fullName: dept.fullName,
           shortName: dept.shortName,
           count: dept._count.teachers
         })),
         byDegree: degreeStats.map(degree => ({
           id: degree.id,
-          label: degree.fullName,
+          fullName: degree.fullName,
           shortName: degree.shortName,
           count: degree._count.teachers
         })),
@@ -361,88 +211,7 @@ export const getStatisticsSummary = async (req, res, next) => {
 // [GET] /api/statistics/summary/export
 export const exportStatisticsSummary = async (req, res, next) => {
   try {
-    // Get counts for teachers, departments, and degrees
-    const [teacherCount, departmentCount, degreeCount] = await Promise.all([
-      prisma.teacher.count(),
-      prisma.department.count(),
-      prisma.degree.count()
-    ]);
-    
-    if (teacherCount === 0) {
-      return res.status(404).json({ 
-        message: 'Không có dữ liệu thống kê' 
-      });
-    }
-    
-    // Get statistics on teachers by department
-    const departmentStats = await prisma.department.findMany({
-      select: {
-        id: true,
-        fullName: true,
-        shortName: true,
-        _count: {
-          select: { teachers: true }
-        }
-      },
-      orderBy: {
-        fullName: 'asc'
-      }
-    });
-    
-    // Get statistics on teachers by degree
-    const degreeStats = await prisma.degree.findMany({
-      select: {
-        id: true,
-        fullName: true,
-        shortName: true,
-        _count: {
-          select: { teachers: true }
-        }
-      },
-      orderBy: {
-        fullName: 'asc'
-      }
-    });
-    
-    // Get all teachers for age stats
-    const teachers = await prisma.teacher.findMany({
-      select: {
-        dateOfBirth: true
-      }
-    });
-    
-    const ageStats = groupTeachersByAgeRange(teachers);
-    
-    const data = {
-      counts: {
-        teachers: teacherCount,
-        departments: departmentCount,
-        degrees: degreeCount
-      },
-      byDepartment: departmentStats.map(dept => ({
-        id: dept.id,
-        label: dept.fullName,
-        shortName: dept.shortName,
-        count: dept._count.teachers
-      })),
-      byDegree: degreeStats.map(degree => ({
-        id: degree.id,
-        label: degree.fullName,
-        shortName: degree.shortName,
-        count: degree._count.teachers
-      })),
-      byAge: ageStats
-    };
-    
-    // Generate Excel file
-    const buffer = await exportSummaryStatisticsToExcel(data);
-    
-    // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=thong-ke-tong-hop.xlsx');
-    
-    // Send the buffer
-    res.send(buffer);
+    res.status(501).json({ message: 'Not implemented yet' });
   } catch (error) {
     next(error);
   }
