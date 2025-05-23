@@ -30,6 +30,7 @@ model Department {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   teachers    Teacher[]
+  subjects    Subject[]
 }
 
 model Teacher {
@@ -45,4 +46,30 @@ model Teacher {
   degreeId     String     @db.VarChar(36)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+}
+
+model Subject {
+  id               String     @id @db.VarChar(36)
+  code             String     @unique @db.VarChar(10) // Format: HPxxxx
+  name             String     @db.VarChar(200)
+  credits          Int        // Số tín chỉ
+  coefficient      Float      // Hệ số học phần  
+  totalPeriods     Int        // Số tiết
+  department       Department @relation(fields: [departmentId], references: [id])
+  departmentId     String     @db.VarChar(36)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model Semester {
+  id            String   @id @db.VarChar(36)
+  termNumber    Int      // Số kỳ (1, 2, 3)
+  isSupplementary Boolean @default(false) // Có phải kỳ phụ không
+  academicYear  String   @db.VarChar(20)     // Năm học (VD: "2024-2025")
+  startDate     DateTime @db.Date            // Ngày bắt đầu
+  endDate       DateTime @db.Date            // Ngày kết thúc
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([academicYear, termNumber, isSupplementary]) // Không được trùng kỳ và năm học
 }

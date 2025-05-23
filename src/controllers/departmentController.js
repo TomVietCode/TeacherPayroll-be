@@ -57,7 +57,9 @@ export const createDepartment = async (req, res, next) => {
     res.status(201).json({ data: newDepartment.id });
   } catch (error) {
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: error.errors });
+      const firstError = error.errors[0];
+      const errorMessage = firstError.message || 'Validation error';
+      return res.status(400).json({ message: errorMessage });
     }
     next(error);
   }
@@ -98,7 +100,9 @@ export const updateDepartment = async (req, res, next) => {
     res.json({ data: true });
   } catch (error) {
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: error.errors });
+      const firstError = error.errors[0];
+      const errorMessage = firstError.message || 'Validation error';
+      return res.status(400).json({ message: errorMessage });
     }
     next(error);
   }
