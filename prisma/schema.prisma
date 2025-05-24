@@ -49,27 +49,45 @@ model Teacher {
 }
 
 model Subject {
-  id               String     @id @db.VarChar(36)
-  code             String     @unique @db.VarChar(10) // Format: HPxxxx
-  name             String     @db.VarChar(200)
-  credits          Int        // Số tín chỉ
-  coefficient      Float      // Hệ số học phần  
-  totalPeriods     Int        // Số tiết
-  department       Department @relation(fields: [departmentId], references: [id])
-  departmentId     String     @db.VarChar(36)
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id               String       @id @db.VarChar(36)
+  code             String       @unique @db.VarChar(10) // Format: HPxxxx
+  name             String       @db.VarChar(200)
+  credits          Int          // Số tín chỉ
+  coefficient      Float        // Hệ số học phần  
+  totalPeriods     Int          // Số tiết
+  department       Department   @relation(fields: [departmentId], references: [id])
+  departmentId     String       @db.VarChar(36)
+  courseClasses    CourseClass[] // Relation to course classes
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }
 
 model Semester {
+  id            String        @id @db.VarChar(36)
+  termNumber    Int           // Số kỳ (1, 2, 3)
+  isSupplementary Boolean     @default(false) // Có phải kỳ phụ không
+  academicYear  String        @db.VarChar(20)     // Năm học (VD: "2024-2025")
+  startDate     DateTime      @db.Date            // Ngày bắt đầu
+  endDate       DateTime      @db.Date            // Ngày kết thúc
+  courseClasses CourseClass[] // Relation to course classes
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([academicYear, termNumber, isSupplementary]) // Không được trùng kỳ và năm học
+}
+
+model CourseClass {
   id            String   @id @db.VarChar(36)
-  termNumber    Int      // Số kỳ (1, 2, 3)
-  isSupplementary Boolean @default(false) // Có phải kỳ phụ không
-  academicYear  String   @db.VarChar(20)     // Năm học (VD: "2024-2025")
-  startDate     DateTime @db.Date            // Ngày bắt đầu
-  endDate       DateTime @db.Date            // Ngày kết thúc
+  code          String   @unique @db.VarChar(20) // Format: LHPxxxxNyy  
+  name          String   @db.VarChar(250)        // Format: "Tên học phần (Nyy)"
+  studentCount  Int      @default(0)             // Số sinh viên
+  classNumber   Int                              // Số thứ tự lớp (01, 02, ...)
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  subjectId     String   @db.VarChar(36)
+  semester      Semester @relation(fields: [semesterId], references: [id])
+  semesterId    String   @db.VarChar(36)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@unique([academicYear, termNumber, isSupplementary]) // Không được trùng kỳ và năm học
+  @@unique([subjectId, semesterId, classNumber]) // Không được trùng môn học, kỳ học và số lớp
 }

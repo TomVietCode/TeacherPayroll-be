@@ -11,6 +11,7 @@ import teacherRoutes from './routes/teacherRoutes.js';
 import statisticsRoutes from './routes/statisticsRoutes.js';
 import subjectRoutes from './routes/subjectRoutes.js';
 import semesterRoutes from './routes/semesterRoutes.js';
+import courseClassRoutes from './routes/courseClassRoutes.js';
 
 // Initialize app and Prisma client
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/semesters', semesterRoutes);
+app.use('/api/course-classes', courseClassRoutes);
 
 app.get('/api', (req, res) => {
   res.json({ message: 'API is running' });

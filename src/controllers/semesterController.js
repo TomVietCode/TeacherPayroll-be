@@ -38,10 +38,10 @@ const checkDateConflicts = async (startDate, endDate, excludeId = null) => {
     const daysDiffStart = timeDiffStart / (1000 * 60 * 60 * 24);
     const daysDiffEnd = timeDiffEnd / (1000 * 60 * 60 * 24);
     
-    if (daysDiffStart < 45 || daysDiffEnd < 45) {
+    if (daysDiffStart < 20 || daysDiffEnd < 20) {
       return { 
         conflict: true, 
-        message: 'Start date must be at least 45 days away from other semesters' 
+        message: 'Start date must be at least 20 days away from other semesters' 
       };
     }
   }
