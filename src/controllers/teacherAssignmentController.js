@@ -4,7 +4,6 @@ import {
   createTeacherAssignmentSchema,
   updateTeacherAssignmentSchema,
   bulkAssignmentSchema,
-  quickAssignmentSchema,
   assignmentQuerySchema
 } from '../validators/teacherAssignmentValidator.js';
 
@@ -24,17 +23,6 @@ export const getAllAssignments = async (req, res) => {
     
     if (validatedQuery.teacherId) where.teacherId = validatedQuery.teacherId;
     if (validatedQuery.courseClassId) where.courseClassId = validatedQuery.courseClassId;
-    if (validatedQuery.status) where.status = validatedQuery.status;
-    
-    if (validatedQuery.assignedDateFrom || validatedQuery.assignedDateTo) {
-      where.assignedDate = {};
-      if (validatedQuery.assignedDateFrom) {
-        where.assignedDate.gte = new Date(validatedQuery.assignedDateFrom);
-      }
-      if (validatedQuery.assignedDateTo) {
-        where.assignedDate.lte = new Date(validatedQuery.assignedDateTo);
-      }
-    }
 
     // Add nested filters
     if (validatedQuery.semesterId || validatedQuery.subjectId || validatedQuery.departmentId) {
@@ -89,7 +77,6 @@ export const getAllAssignments = async (req, res) => {
           }
         },
         orderBy: [
-          { assignedDate: 'desc' },
           { createdAt: 'desc' }
         ],
         skip,
@@ -243,9 +230,6 @@ export const createAssignment = async (req, res) => {
         id: uuidv7(),
         teacherId: validatedData.teacherId,
         courseClassId: validatedData.courseClassId,
-        assignedDate: validatedData.assignedDate ? new Date(validatedData.assignedDate) : new Date(),
-        workload: validatedData.workload,
-        notes: validatedData.notes
       },
       include: {
         teacher: {
@@ -338,9 +322,6 @@ export const bulkAssignment = async (req, res) => {
       id: uuidv7(),
       teacherId: validatedData.teacherId,
       courseClassId,
-      assignedDate: validatedData.assignedDate ? new Date(validatedData.assignedDate) : new Date(),
-      workload: validatedData.workload,
-      notes: validatedData.notes
     }));
 
     const assignments = await prisma.teacherAssignment.createMany({
@@ -368,112 +349,6 @@ export const bulkAssignment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create bulk assignments'
-    });
-  }
-};
-
-// Quick assignment with smart filtering
-export const quickAssignment = async (req, res) => {
-  try {
-    const validatedData = quickAssignmentSchema.parse(req.body);
-
-    // Check if teacher exists
-    const teacher = await prisma.teacher.findUnique({
-      where: { id: validatedData.teacherId },
-      include: {
-        department: true
-      }
-    });
-    if (!teacher) {
-      return res.status(404).json({
-        success: false,
-        message: 'Teacher not found'
-      });
-    }
-
-    // Build filter for course classes
-    const where = {};
-    
-    if (validatedData.semesterId) where.semesterId = validatedData.semesterId;
-    if (validatedData.subjectId) where.subjectId = validatedData.subjectId;
-    if (validatedData.departmentId) {
-      where.subject = { departmentId: validatedData.departmentId };
-    } else {
-      // Default to teacher's department if not specified
-      where.subject = { departmentId: teacher.departmentId };
-    }
-
-    // If unassignedOnly is true, exclude classes that already have assignments
-    if (validatedData.unassignedOnly) {
-      where.assignments = { none: {} };
-    }
-
-    // Find suitable course classes
-    const courseClasses = await prisma.courseClass.findMany({
-      where,
-      include: {
-        subject: {
-          select: { name: true, credits: true, totalPeriods: true }
-        },
-        semester: {
-          select: { termNumber: true, academicYear: true }
-        }
-      },
-      take: validatedData.maxClasses,
-      orderBy: [
-        { semester: { startDate: 'desc' } },
-        { subject: { name: 'asc' } },
-        { classNumber: 'asc' }
-      ]
-    });
-
-    if (courseClasses.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No suitable course classes found for assignment'
-      });
-    }
-
-    // Create assignments for found classes
-    const assignmentData = courseClasses.map(courseClass => ({
-      id: uuidv7(),
-      teacherId: validatedData.teacherId,
-      courseClassId: courseClass.id,
-      assignedDate: validatedData.assignedDate ? new Date(validatedData.assignedDate) : new Date(),
-      workload: validatedData.workload,
-      notes: validatedData.notes
-    }));
-
-    const assignments = await prisma.teacherAssignment.createMany({
-      data: assignmentData
-    });
-
-    res.status(201).json({
-      success: true,
-      message: `Successfully assigned teacher to ${assignments.count} classes using smart filtering`,
-      data: {
-        assignedCount: assignments.count,
-        teacherName: teacher.fullName,
-        assignedClasses: courseClasses.map(c => ({
-          id: c.id,
-          name: c.name,
-          subject: c.subject.name,
-          semester: `${c.semester.academicYear} - Term ${c.semester.termNumber}`
-        }))
-      }
-    });
-  } catch (error) {
-    console.error('Error creating quick assignments:', error);
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid input data',
-        errors: error.errors
-      });
-    }
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create quick assignments'
     });
   }
 };
@@ -520,10 +395,6 @@ export const updateAssignment = async (req, res) => {
     const updateData = {};
     if (validatedData.teacherId) updateData.teacherId = validatedData.teacherId;
     if (validatedData.courseClassId) updateData.courseClassId = validatedData.courseClassId;
-    if (validatedData.assignedDate) updateData.assignedDate = new Date(validatedData.assignedDate);
-    if (validatedData.status) updateData.status = validatedData.status;
-    if (validatedData.workload !== undefined) updateData.workload = validatedData.workload;
-    if (validatedData.notes !== undefined) updateData.notes = validatedData.notes;
 
     const assignment = await prisma.teacherAssignment.update({
       where: { id },
@@ -606,7 +477,7 @@ export const deleteAssignment = async (req, res) => {
   }
 };
 
-// Get unassigned course classes for quick assignment
+// Get unassigned course classes for bulk assignment
 export const getUnassignedClasses = async (req, res) => {
   try {
     const validatedQuery = assignmentQuerySchema.parse(req.query);
@@ -678,7 +549,6 @@ export const getTeacherWorkload = async (req, res) => {
 
     const where = {
       teacherId,
-      status: 'active'
     };
 
     if (semesterId) {
@@ -714,17 +584,15 @@ export const getTeacherWorkload = async (req, res) => {
       totalClasses: assignments.length,
       totalStudents: assignments.reduce((sum, a) => sum + a.courseClass.studentCount, 0),
       totalCredits: assignments.reduce((sum, a) => sum + a.courseClass.subject.credits, 0),
-      totalPeriods: assignments.reduce((sum, a) => sum + (a.workload || a.courseClass.subject.totalPeriods), 0),
+      totalPeriods: assignments.reduce((sum, a) => sum + a.courseClass.subject.totalPeriods, 0),
       assignments: assignments.map(a => ({
         id: a.id,
         className: a.courseClass.name,
         subjectName: a.courseClass.subject.name,
         credits: a.courseClass.subject.credits,
-        periods: a.workload || a.courseClass.subject.totalPeriods,
+        periods: a.courseClass.subject.totalPeriods,
         studentCount: a.courseClass.studentCount,
         semester: `${a.courseClass.semester.academicYear} - Term ${a.courseClass.semester.termNumber}`,
-        assignedDate: a.assignedDate,
-        status: a.status
       }))
     };
 

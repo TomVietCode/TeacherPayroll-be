@@ -4,7 +4,6 @@ import {
   getAssignmentById,
   createAssignment,
   bulkAssignment,
-  quickAssignment,
   updateAssignment,
   deleteAssignment,
   getUnassignedClasses,
@@ -22,9 +21,8 @@ router.delete('/:id', deleteAssignment);
 
 // Optimized assignment operations
 router.post('/bulk', bulkAssignment);
-router.post('/quick', quickAssignment);
 
-// Helper endpoints for quick assignment
+// Helper endpoints for bulk assignment
 router.get('/unassigned/classes', getUnassignedClasses);
 router.get('/teacher/:teacherId/workload', getTeacherWorkload);
 
