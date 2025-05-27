@@ -79,7 +79,7 @@ model Semester {
 
 model CourseClass {
   id            String              @id @db.VarChar(36)
-  code          String              @unique @db.VarChar(20) // Format: LHPxxxxNyy  
+  code          String              @db.VarChar(20) // Format: LHPxxxxNyy  
   name          String              @db.VarChar(250)        // Format: "Tên học phần (Nyy)"
   studentCount  Int                 @default(0)             // Số sinh viên
   classNumber   Int                             // Số thứ tự lớp (01, 02, ...)
@@ -91,6 +91,7 @@ model CourseClass {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
+  @@unique([code, semesterId]) // Không được trùng mã lớp trong cùng kỳ học
   @@unique([subjectId, semesterId, classNumber]) // Không được trùng môn học, kỳ học và số lớp
 }
 

@@ -199,12 +199,23 @@ export const createAssignment = async (req, res) => {
 
     // Check if course class exists
     const courseClass = await prisma.courseClass.findUnique({
-      where: { id: validatedData.courseClassId }
+      where: { id: validatedData.courseClassId },
+      include: {
+        assignments: true
+      }
     });
     if (!courseClass) {
       return res.status(404).json({
         success: false,
         message: 'Course class not found'
+      });
+    }
+
+    // Check if course class already has a teacher assigned
+    if (courseClass.assignments.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'This course class already has a teacher assigned'
       });
     }
 
@@ -230,6 +241,7 @@ export const createAssignment = async (req, res) => {
         id: uuidv7(),
         teacherId: validatedData.teacherId,
         courseClassId: validatedData.courseClassId,
+        assignedDate: new Date(),
       },
       include: {
         teacher: {
@@ -322,6 +334,7 @@ export const bulkAssignment = async (req, res) => {
       id: uuidv7(),
       teacherId: validatedData.teacherId,
       courseClassId,
+      assignedDate: new Date(),
     }));
 
     const assignments = await prisma.teacherAssignment.createMany({

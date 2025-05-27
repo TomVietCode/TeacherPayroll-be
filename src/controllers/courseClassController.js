@@ -4,11 +4,12 @@ import { v7 as uuidv7 } from 'uuid';
 
 const prisma = new PrismaClient();
 
-// Helper function to generate course class code: LHPxxxxNyy
-const generateCourseClassCode = (subjectCode, classNumber) => {
+// Helper function to generate course class code: LHPxxxxKyNyy (Ky = kỳ học)
+const generateCourseClassCode = (subjectCode, classNumber, semester) => {
   const subjectCodeNumbers = subjectCode.substring(2); // Get 4 digits from HPxxxx
   const formattedClassNumber = classNumber.toString().padStart(2, '0');
-  return `LHP${subjectCodeNumbers}N${formattedClassNumber}`;
+  const semesterSuffix = semester.isSupplementary ? `${semester.termNumber}P` : semester.termNumber;
+  return `LHP${subjectCodeNumbers}K${semesterSuffix}N${formattedClassNumber}`;
 };
 
 // Helper function to generate course class name: "Subject Name (Nyy)"
@@ -46,6 +47,17 @@ export const getAllCourseClasses = async (req, res, next) => {
             termNumber: true,
             isSupplementary: true,
             academicYear: true
+          }
+        },
+        assignments: {
+          select: {
+            teacher: {
+              select: {
+                id: true,
+                fullName: true,
+                code: true
+              }
+            }
           }
         }
       },
@@ -133,13 +145,20 @@ export const createCourseClasses = async (req, res, next) => {
       orderBy: { classNumber: 'desc' }
     });
     
+    // Check if creating new classes would exceed the limit
+    if (existingClasses.length + validatedData.numberOfClasses > 10) {
+      return res.status(400).json({ 
+        message: `Cannot create ${validatedData.numberOfClasses} more classes. Current: ${existingClasses.length}, Maximum: 10` 
+      });
+    }
+    
     const startingClassNumber = existingClasses.length > 0 ? existingClasses[0].classNumber + 1 : 1;
     
     // Create multiple course classes
     const createdClasses = [];
     for (let i = 0; i < validatedData.numberOfClasses; i++) {
       const classNumber = startingClassNumber + i;
-      const code = generateCourseClassCode(subject.code, classNumber);
+      const code = generateCourseClassCode(subject.code, classNumber, semester);
       const name = generateCourseClassName(subject.name, classNumber);
       
       const newCourseClass = await prisma.courseClass.create({
@@ -259,6 +278,17 @@ export const getCourseClassesBySemester = async (req, res, next) => {
             name: true,
             code: true
           }
+        },
+        assignments: {
+          select: {
+            teacher: {
+              select: {
+                id: true,
+                fullName: true,
+                code: true
+              }
+            }
+          }
         }
       },
       orderBy: [
@@ -283,7 +313,8 @@ export const getCourseClassesBySemester = async (req, res, next) => {
         code: courseClass.code,
         name: courseClass.name,
         studentCount: courseClass.studentCount,
-        classNumber: courseClass.classNumber
+        classNumber: courseClass.classNumber,
+        teacher: courseClass.assignments.length > 0 ? courseClass.assignments[0].teacher : null
       });
       
       return acc;
