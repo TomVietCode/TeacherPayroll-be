@@ -89,6 +89,18 @@ export const createSubject = async (req, res, next) => {
       return res.status(400).json({ message: 'Department not found' });
     }
     
+    // Check if subject name already exists in the same department
+    const existingSubject = await prisma.subject.findFirst({
+      where: {
+        name: validatedData.name,
+        departmentId: validatedData.departmentId
+      }
+    });
+    
+    if (existingSubject) {
+      return res.status(400).json({ message: 'Tên học phần đã tồn tại trong khoa này' });
+    }
+    
     // Generate unique subject code
     const code = await generateSubjectCode();
     
@@ -145,6 +157,22 @@ export const updateSubject = async (req, res, next) => {
       }
     }
     
+    // Check if subject name already exists in the same department (excluding current subject)
+    if (validatedData.name) {
+      const departmentId = validatedData.departmentId || subject.departmentId;
+      const existingSubject = await prisma.subject.findFirst({
+        where: {
+          name: validatedData.name,
+          departmentId: departmentId,
+          id: { not: id }
+        }
+      });
+      
+      if (existingSubject) {
+        return res.status(400).json({ message: 'Tên học phần đã tồn tại trong khoa này' });
+      }
+    }
+    
     const updatedSubject = await prisma.subject.update({
       where: { id },
       data: validatedData,
@@ -176,15 +204,20 @@ export const deleteSubject = async (req, res, next) => {
     const { id } = req.params;
     
     const subject = await prisma.subject.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        courseClasses: true
+      }
     });
     
     if (!subject) {
       return res.status(404).json({ message: 'Subject not found' });
     }
     
-    // TODO: Check if subject is being used in course classes when that feature is implemented
-    // For now, we allow deletion
+    // Check if subject is being used in course classes
+    if (subject.courseClasses.length > 0) {
+      return res.status(400).json({ message: 'Không thể xóa vì học phần đang được sử dụng' });
+    }
     
     await prisma.subject.delete({
       where: { id }
@@ -192,6 +225,10 @@ export const deleteSubject = async (req, res, next) => {
     
     res.status(204).json({ data: true }); 
   } catch (error) {
+    // Handle foreign key constraint violation
+    if (error.code === 'P2003' || error.code === 'P2014') {
+      return res.status(400).json({ message: 'Không thể xóa vì học phần đang được sử dụng' });
+    }
     next(error);
   }
 }; 

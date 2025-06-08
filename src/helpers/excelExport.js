@@ -299,4 +299,92 @@ export const exportSummaryStatisticsToExcel = async (data) => {
   // Tạo buffer
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer;
+};
+
+/**
+ * Xuất dữ liệu thống kê lớp học phần ra file Excel
+ * @param {Array} data Dữ liệu thống kê lớp học phần
+ * @param {String} academicYear Năm học
+ */
+export const exportCourseClassStatisticsToExcel = async (data, academicYear) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(`Thống kê lớp học phần ${academicYear}`);
+  
+  // Định dạng tiêu đề
+  worksheet.columns = [
+    { header: 'STT', key: 'stt', width: 10 },
+    { header: 'Mã học phần', key: 'subjectCode', width: 15 },
+    { header: 'Tên học phần', key: 'subjectName', width: 40 },
+    { header: 'Khoa', key: 'departmentName', width: 30 },
+    { header: 'Số lớp mở', key: 'classCount', width: 15 },
+    { header: 'Tổng số sinh viên', key: 'totalStudents', width: 20 }
+  ];
+  
+  // Style cho header
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+  
+  // Thêm dữ liệu
+  let totalClasses = 0;
+  let totalStudents = 0;
+  
+  data.forEach((item, index) => {
+    totalClasses += item.classCount;
+    totalStudents += item.totalStudents;
+    
+    worksheet.addRow({
+      stt: index + 1,
+      subjectCode: item.subjectCode,
+      subjectName: item.subjectName,
+      departmentName: item.departmentName,
+      classCount: item.classCount,
+      totalStudents: item.totalStudents
+    });
+  });
+  
+  // Thêm hàng tổng cộng
+  const summaryRow = worksheet.addRow({
+    stt: '',
+    subjectCode: '',
+    subjectName: 'TỔNG CỘNG',
+    departmentName: '',
+    classCount: totalClasses,
+    totalStudents: totalStudents
+  });
+  
+  // Style cho hàng tổng cộng
+  summaryRow.font = { bold: true };
+  summaryRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFEAA7' }
+  };
+  
+  // Định dạng các ô số liệu và thêm border
+  const lastRow = worksheet.rowCount;
+  for (let i = 1; i <= lastRow; i++) {
+    for (let j = 1; j <= 6; j++) {
+      const cell = worksheet.getCell(i, j);
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      
+      // Căn giữa cho các cột số liệu
+      if (j === 1 || j === 5 || j === 6) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+    }
+  }
+  
+  // Tạo buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer;
 }; 

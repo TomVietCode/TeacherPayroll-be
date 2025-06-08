@@ -255,21 +255,47 @@ export const deleteSemester = async (req, res, next) => {
     const { id } = req.params;
     
     const semester = await prisma.semester.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        courseClasses: true
+      }
     });
     
     if (!semester) {
       return res.status(404).json({ message: 'Semester not found' });
     }
     
-    // TODO: Check if semester is being used in course classes when that feature is implemented
-    // For now, we allow deletion
+    // Check if semester is being used in course classes
+    if (semester.courseClasses.length > 0) {
+      return res.status(400).json({ message: 'Không thể xóa vì kỳ học đang được sử dụng' });
+    }
     
     await prisma.semester.delete({
       where: { id }
     });
     
     res.status(204).json({ data: true }); 
+  } catch (error) {
+    // Handle foreign key constraint violation
+    if (error.code === 'P2003' || error.code === 'P2014') {
+      return res.status(400).json({ message: 'Không thể xóa vì kỳ học đang được sử dụng' });
+    }
+    next(error);
+  }
+};
+
+// [GET] /api/semesters/academic-years
+export const getAcademicYears = async (req, res, next) => {
+  try {
+    const semesters = await prisma.semester.findMany({
+      select: { academicYear: true },
+      distinct: ['academicYear'],
+      orderBy: { academicYear: 'desc' }
+    });
+    
+    const academicYears = semesters.map(semester => semester.academicYear);
+    
+    res.json(academicYears);
   } catch (error) {
     next(error);
   }

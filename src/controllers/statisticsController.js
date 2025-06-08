@@ -215,4 +215,133 @@ export const exportStatisticsSummary = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// [GET] /api/statistics/course-classes/:academicYear
+export const getCourseClassStatistics = async (req, res, next) => {
+  try {
+    const { academicYear } = req.params;
+    
+    // Get all semesters in the selected academic year
+    const semesters = await prisma.semester.findMany({
+      where: {
+        academicYear: academicYear
+      },
+      select: {
+        id: true
+      }
+    });
+
+    const semesterIds = semesters.map(semester => semester.id);
+    
+    // Get all subjects with their course classes in these semesters
+    const subjects = await prisma.subject.findMany({
+      include: {
+        courseClasses: {
+          where: {
+            semesterId: {
+              in: semesterIds
+            }
+          },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            studentCount: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+    
+    // Format the result
+    const statistics = subjects.map(subject => {
+      const classCount = subject.courseClasses.length;
+      const totalStudents = subject.courseClasses.reduce((sum, cls) => sum + (cls.studentCount || 0), 0);
+      
+      return {
+        subjectId: subject.id,
+        subjectCode: subject.code,
+        subjectName: subject.name,
+        classCount,
+        totalStudents
+      };
+    });
+    
+    res.json(statistics);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// [GET] /api/statistics/course-classes/:academicYear/export
+export const exportCourseClassStatistics = async (req, res, next) => {
+  try {
+    const { academicYear } = req.params;
+    
+    // Get all semesters in the selected academic year
+    const semesters = await prisma.semester.findMany({
+      where: {
+        academicYear: academicYear
+      },
+      select: {
+        id: true
+      }
+    });
+
+    const semesterIds = semesters.map(semester => semester.id);
+    
+    // Get all subjects with their course classes in these semesters
+    const subjects = await prisma.subject.findMany({
+      include: {
+        courseClasses: {
+          where: {
+            semesterId: {
+              in: semesterIds
+            }
+          },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            studentCount: true
+          }
+        },
+        department: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+    
+    // Format the result for Excel export
+    const statistics = subjects.map(subject => {
+      const classCount = subject.courseClasses.length;
+      const totalStudents = subject.courseClasses.reduce((sum, cls) => sum + (cls.studentCount || 0), 0);
+      
+      return {
+        subjectId: subject.id,
+        subjectCode: subject.code,
+        subjectName: subject.name,
+        departmentName: subject.department?.fullName || 'Chưa phân khoa',
+        classCount,
+        totalStudents
+      };
+    });
+    
+    // Generate Excel file using excelExport helper
+    const { exportCourseClassStatisticsToExcel } = await import('../helpers/excelExport.js');
+    const buffer = await exportCourseClassStatisticsToExcel(statistics, academicYear);
+    
+    // Set response headers for Excel file download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="thong-ke-lop-hoc-phan-${academicYear}.xlsx"`);
+    res.setHeader('Content-Length', buffer.length);
+    
+    res.send(buffer);
+  } catch (error) {
+    next(error);
+  }
 }; 

@@ -243,15 +243,20 @@ export const deleteCourseClass = async (req, res, next) => {
     const { id } = req.params;
     
     const courseClass = await prisma.courseClass.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        assignments: true
+      }
     });
     
     if (!courseClass) {
       return res.status(404).json({ message: 'Course class not found' });
     }
     
-    // TODO: Check if course class has assigned teachers when UC2.4 is implemented
-    // For now, we allow deletion
+    // Check if course class has assigned teachers
+    if (courseClass.assignments.length > 0) {
+      return res.status(400).json({ message: 'Không thể xóa vì lớp đã được phân công giảng viên' });
+    }
     
     await prisma.courseClass.delete({
       where: { id }
@@ -259,6 +264,10 @@ export const deleteCourseClass = async (req, res, next) => {
     
     res.status(204).json({ data: true }); 
   } catch (error) {
+    // Handle foreign key constraint violation
+    if (error.code === 'P2003' || error.code === 'P2014') {
+      return res.status(400).json({ message: 'Không thể xóa vì lớp đã được phân công giảng viên' });
+    }
     next(error);
   }
 };
