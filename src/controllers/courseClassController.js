@@ -4,12 +4,15 @@ import { v7 as uuidv7 } from 'uuid';
 
 const prisma = new PrismaClient();
 
-// Helper function to generate course class code: LHPxxxxKyNyy (Ky = kỳ học)
+// Helper function to generate course class code: SubjectCode-Term-Year(Nxx) (e.g., CNTT01-1-26(N01), CNTT01-1(p)-26(N02))
 const generateCourseClassCode = (subjectCode, classNumber, semester) => {
-  const subjectCodeNumbers = subjectCode.substring(2); // Get 4 digits from HPxxxx
   const formattedClassNumber = classNumber.toString().padStart(2, '0');
-  const semesterSuffix = semester.isSupplementary ? `${semester.termNumber}P` : semester.termNumber;
-  return `LHP${subjectCodeNumbers}K${semesterSuffix}N${formattedClassNumber}`;
+  const semesterSuffix = semester.isSupplementary ? `${semester.termNumber}(p)` : semester.termNumber;
+  
+  // Extract last 2 digits from academic year (e.g., "2026-2027" -> "26")
+  const yearSuffix = semester.academicYear.split('-')[1].slice(-2);
+  
+  return `${subjectCode}-${semesterSuffix}-${yearSuffix}(N${formattedClassNumber})`;
 };
 
 // Helper function to generate course class name: "Subject Name (Nyy)"

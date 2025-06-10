@@ -51,7 +51,7 @@ model Teacher {
 
 model Subject {
   id               String       @id @db.VarChar(36)
-  code             String       @unique @db.VarChar(10) // Format: HPxxxx
+  code             String       @unique @db.VarChar(20) // Format: DeptShortName + 2 digits (e.g., CNTT01)
   name             String       @db.VarChar(200)
   credits          Int          // Số tín chỉ
   coefficient      Float        // Hệ số học phần  
@@ -79,7 +79,7 @@ model Semester {
 
 model CourseClass {
   id            String              @id @db.VarChar(36)
-  code          String              @db.VarChar(20) // Format: LHPxxxxNyy  
+  code          String              @db.VarChar(30) // Format: SubjectCode-Term-Year(Nxx) (e.g., CNTT01-1-26(N01))
   name          String              @db.VarChar(250)        // Format: "Tên học phần (Nyy)"
   studentCount  Int                 @default(0)             // Số sinh viên
   classNumber   Int                             // Số thứ tự lớp (01, 02, ...)

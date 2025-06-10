@@ -4,13 +4,23 @@ import { v7 as uuidv7 } from 'uuid';
 
 const prisma = new PrismaClient();
 
-// Generate subject code with format HPxxxx
-const generateSubjectCode = async () => {
-  // Find the highest code number
+// Generate subject code with format: Department Short Name + 2 digits (e.g., CNTT01, CNTT02)
+const generateSubjectCode = async (departmentId) => {
+  // Get department information
+  const department = await prisma.department.findUnique({
+    where: { id: departmentId },
+    select: { shortName: true }
+  });
+  
+  if (!department) {
+    throw new Error('Department not found');
+  }
+  
+  // Find the highest code number for this department
   const lastSubject = await prisma.subject.findFirst({
     where: {
       code: {
-        startsWith: 'HP'
+        startsWith: department.shortName
       }
     },
     orderBy: {
@@ -20,11 +30,15 @@ const generateSubjectCode = async () => {
   
   let nextNumber = 1;
   if (lastSubject) {
-    const currentNumber = parseInt(lastSubject.code.substring(2));
-    nextNumber = currentNumber + 1;
+    // Extract the number part from the code (e.g., "01" from "CNTT01")
+    const numberPart = lastSubject.code.substring(department.shortName.length);
+    const currentNumber = parseInt(numberPart);
+    if (!isNaN(currentNumber)) {
+      nextNumber = currentNumber + 1;
+    }
   }
   
-  return `HP${nextNumber.toString().padStart(4, '0')}`;
+  return `${department.shortName}${nextNumber.toString().padStart(2, '0')}`;
 };
 
 // [GET] /api/subjects
@@ -102,7 +116,7 @@ export const createSubject = async (req, res, next) => {
     }
     
     // Generate unique subject code
-    const code = await generateSubjectCode();
+    const code = await generateSubjectCode(validatedData.departmentId);
     
     const newSubject = await prisma.subject.create({
       data: {
