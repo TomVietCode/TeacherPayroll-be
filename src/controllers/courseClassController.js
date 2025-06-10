@@ -171,6 +171,7 @@ export const createCourseClasses = async (req, res, next) => {
           name,
           classNumber,
           studentCount: 0,
+          maxStudents: validatedData.maxStudents,
           subjectId: validatedData.subjectId,
           semesterId: validatedData.semesterId
         },
@@ -325,6 +326,7 @@ export const getCourseClassesBySemester = async (req, res, next) => {
         code: courseClass.code,
         name: courseClass.name,
         studentCount: courseClass.studentCount,
+        maxStudents: courseClass.maxStudents,
         classNumber: courseClass.classNumber,
         teacher: courseClass.assignments.length > 0 ? courseClass.assignments[0].teacher : null
       });

@@ -14,12 +14,14 @@ datasource db {
 }
 
 model Degree {
-  id        String    @id @db.VarChar(36)
-  fullName  String    @db.VarChar(100)
-  shortName String    @unique @db.VarChar(5)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  teachers  Teacher[]
+  id                  String               @id @db.VarChar(36)
+  fullName            String               @db.VarChar(100)
+  shortName           String               @unique @db.VarChar(5)
+  coefficient         Float                @default(1.0) // Hệ số bằng cấp
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  teachers            Teacher[]
+  teacherCoefficients TeacherCoefficient[] // Relation to teacher coefficients
 }
 
 model Department {
@@ -82,6 +84,7 @@ model CourseClass {
   code          String              @db.VarChar(30) // Format: SubjectCode-Term-Year(Nxx) (e.g., CNTT01-1-26(N01))
   name          String              @db.VarChar(250)        // Format: "Tên học phần (Nyy)"
   studentCount  Int                 @default(0)             // Số sinh viên
+  maxStudents   Int                 @default(40)            // Số sinh viên tối đa
   classNumber   Int                             // Số thứ tự lớp (01, 02, ...)
   subject       Subject             @relation(fields: [subjectId], references: [id])
   subjectId     String              @db.VarChar(36)
@@ -112,4 +115,36 @@ model TeacherAssignment {
   @@index([teacherId])
   @@index([courseClassId])
   @@index([assignedDate])
+}
+
+// Định mức tiền theo tiết cho từng năm học
+model HourlyRate {
+  id                String   @id @db.VarChar(36)
+  academicYear      String   @unique @db.VarChar(20) // Năm học (VD: "2024-2025")
+  ratePerHour       Float    // Số tiền cho một tiết (VNĐ)
+  establishedDate   DateTime @default(now()) // Ngày thiết lập
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Hệ số giáo viên theo bằng cấp cho từng năm học
+model TeacherCoefficient {
+  id            String @id @db.VarChar(36)
+  academicYear  String @db.VarChar(20) // Năm học (VD: "2024-2025")
+  degree        Degree @relation(fields: [degreeId], references: [id])
+  degreeId      String @db.VarChar(36)
+  coefficient   Float  // Hệ số (1.3, 1.5, 1.7, 2.0, 2.5)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([academicYear, degreeId]) // Không được trùng năm học và bằng cấp
+}
+
+// Hệ số lớp theo số sinh viên chuẩn cho từng năm học
+model ClassCoefficient {
+  id                     String @id @db.VarChar(36)
+  academicYear           String @unique @db.VarChar(20) // Năm học (VD: "2024-2025")
+  standardStudentRange   String @db.VarChar(20) // Khoảng số sinh viên chuẩn (VD: "40-49")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }

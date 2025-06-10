@@ -8,7 +8,11 @@ export const createCourseClassSchema = z.object({
   numberOfClasses: z.number()
     .int('Number of classes must be an integer')
     .min(1, 'Number of classes must be at least 1')
-    .max(10, 'Number of classes cannot exceed 10')
+    .max(10, 'Number of classes cannot exceed 10'),
+  maxStudents: z.number()
+    .int('Max students must be an integer')
+    .min(1, 'Max students must be at least 1')
+    .max(1000, 'Max students cannot exceed 1000')
 });
 
 export const updateCourseClassSchema = z.object({
@@ -16,4 +20,10 @@ export const updateCourseClassSchema = z.object({
     .int('Student count must be an integer')
     .min(0, 'Student count must be non-negative')
     .max(1000, 'Student count cannot exceed 1000')
-}); 
+    .optional(),
+  maxStudents: z.number()
+    .int('Max students must be an integer')
+    .min(1, 'Max students must be at least 1')
+    .max(1000, 'Max students cannot exceed 1000')
+    .optional()
+});
