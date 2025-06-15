@@ -8,15 +8,6 @@ import { v7 as uuidv7 } from 'uuid';
 
 const prisma = new PrismaClient();
 
-// Default coefficient values for degrees
-const DEFAULT_COEFFICIENTS = {
-  'Cử nhân': 1.3,
-  'Thạc sĩ': 1.5,
-  'Tiến sĩ': 1.7,
-  'Phó giáo sư': 2.0,
-  'Giáo sư': 2.5
-};
-
 // [GET] /api/teacher-coefficients
 export const getAllTeacherCoefficients = async (req, res, next) => {
   try {
@@ -52,7 +43,7 @@ export const getTeacherCoefficientsByAcademicYear = async (req, res, next) => {
   try {
     const { academicYear } = req.params;
     
-    // Get all degrees
+    // Get all degrees with their default coefficients
     const degrees = await prisma.degree.findMany({
       orderBy: { fullName: 'asc' }
     });
@@ -84,8 +75,8 @@ export const getTeacherCoefficientsByAcademicYear = async (req, res, next) => {
         return existing;
       }
       
-      // Return default coefficient
-      const defaultCoeff = DEFAULT_COEFFICIENTS[degree.fullName] || 1.0;
+      // Use default coefficient of 1.0 for new coefficients
+      const defaultCoeff = 1.0;
       return {
         id: null, // Indicates this is a default value, not saved yet
         academicYear,

@@ -17,7 +17,6 @@ model Degree {
   id                  String               @id @db.VarChar(36)
   fullName            String               @db.VarChar(100)
   shortName           String               @unique @db.VarChar(5)
-  coefficient         Float                @default(1.0) // Hệ số bằng cấp
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   teachers            Teacher[]
