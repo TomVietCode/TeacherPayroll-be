@@ -17,6 +17,7 @@ import hourlyRateRoutes from './routes/hourlyRateRoutes.js';
 import teacherCoefficientRoutes from './routes/teacherCoefficientRoutes.js';
 import classCoefficientRoutes from './routes/classCoefficientRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 
 // Initialize app and Prisma client
 const app = express();
@@ -41,6 +42,7 @@ app.use('/api/hourly-rates', hourlyRateRoutes);
 app.use('/api/teacher-coefficients', teacherCoefficientRoutes);
 app.use('/api/class-coefficients', classCoefficientRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/api', (req, res) => {
   res.json({ message: 'API is running' });
