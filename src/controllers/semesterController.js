@@ -54,7 +54,7 @@ export const getAllSemesters = async (req, res, next) => {
   try {
     const semesters = await prisma.semester.findMany({
       orderBy: [
-        { academicYear: 'desc' },
+        { academicYear: 'asc' },
         { termNumber: 'asc' },
         { isSupplementary: 'asc' }
       ]
@@ -290,7 +290,7 @@ export const getAcademicYears = async (req, res, next) => {
     const semesters = await prisma.semester.findMany({
       select: { academicYear: true },
       distinct: ['academicYear'],
-      orderBy: { academicYear: 'desc' }
+      orderBy: { academicYear: 'asc' }
     });
     
     const academicYears = semesters.map(semester => semester.academicYear);

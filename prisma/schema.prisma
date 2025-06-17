@@ -65,19 +65,19 @@ model Subject {
   updatedAt        DateTime     @updatedAt
 }
 
-model Semester {
-  id            String        @id @db.VarChar(36)
-  termNumber    Int           // Số kỳ (1, 2, 3)
-  isSupplementary Boolean     @default(false) // Có phải kỳ phụ không
-  academicYear  String        @db.VarChar(20)     // Năm học (VD: "2024-2025")
-  startDate     DateTime      @db.Date            // Ngày bắt đầu
-  endDate       DateTime      @db.Date            // Ngày kết thúc
-  courseClasses CourseClass[] // Relation to course classes
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  model Semester {
+    id            String        @id @db.VarChar(36)
+    termNumber    Int           // Số kỳ (1, 2, 3)
+    isSupplementary Boolean     @default(false) // Có phải kỳ phụ không
+    academicYear  String        @db.VarChar(20)     // Năm học (VD: "2024-2025")
+    startDate     DateTime      @db.Date            // Ngày bắt đầu
+    endDate       DateTime      @db.Date            // Ngày kết thúc
+    courseClasses CourseClass[] // Relation to course classes
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
 
-  @@unique([academicYear, termNumber, isSupplementary]) // Không được trùng kỳ và năm học
-}
+    @@unique([academicYear, termNumber, isSupplementary]) // Không được trùng kỳ và năm học
+  }
 
 model CourseClass {
   id            String              @id @db.VarChar(36)
