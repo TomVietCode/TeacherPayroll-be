@@ -18,6 +18,7 @@ import teacherCoefficientRoutes from './routes/teacherCoefficientRoutes.js';
 import classCoefficientRoutes from './routes/classCoefficientRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Initialize app and Prisma client
 const app = express();
@@ -30,6 +31,7 @@ app.use(cors());
 app.use(morgan('dev')); 
 
 // Define routes
+app.use('/api/auth', authRoutes);
 app.use('/api/degrees', degreeRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/teachers', teacherRoutes);

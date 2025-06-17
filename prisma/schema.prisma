@@ -46,6 +46,7 @@ model Teacher {
   degree       Degree             @relation(fields: [degreeId], references: [id])
   degreeId     String             @db.VarChar(36)
   assignments  TeacherAssignment[] // Relation to teacher assignments
+  user         User?              // Optional relation to user account
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 }
@@ -105,8 +106,6 @@ model TeacherAssignment {
   courseClassId String      @db.VarChar(36)
   assignedDate  DateTime    @db.Date
   status        String      @default("active") @db.VarChar(20) // active, inactive, completed
-  workload      Float?      // Khối lượng công việc (số tiết thực tế)
-  notes         String?     @db.Text
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -146,4 +145,28 @@ model ClassCoefficient {
   standardStudentRange   String @db.VarChar(20) // Khoảng số sinh viên chuẩn (VD: "40-49")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+}
+
+// User authentication and authorization
+model User {
+  id          String   @id @db.VarChar(36)
+  username    String   @unique @db.VarChar(50)  // Mã giáo viên hoặc username custom
+  password    String   @db.VarChar(255)         // Hashed password
+  role        UserRole                          // Enum role
+  isActive    Boolean  @default(true)           // Trạng thái tài khoản
+  teacher     Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId   String?  @unique @db.VarChar(36)  // Optional - chỉ có với role TEACHER
+  lastLogin   DateTime?                         // Lần đăng nhập cuối
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([username])
+  @@index([role])
+}
+
+enum UserRole {
+  ADMIN
+  FACULTY_MANAGER
+  ACCOUNTANT
+  TEACHER
 }

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { createTeacherSchema, updateTeacherSchema } from '../validators/teacherValidator.js';
 import { v7 as uuidv7 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import { generateCode } from './../helpers/generateCode.js';
 
 const prisma = new PrismaClient();
@@ -102,21 +103,44 @@ export const createTeacher = async (req, res, next) => {
       });
     }
     
-    // Create new teacher
-    const newTeacher = await prisma.teacher.create({
-      data: {
-        ...validatedData,
-        code: teacherCode, // Use the generated or user-provided code
-        id: uuidv7(),
-        dateOfBirth
-      },
-      include: {
-        department: true,
-        degree: true
-      }
+    // Create new teacher and user account in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create teacher
+      const newTeacher = await tx.teacher.create({
+        data: {
+          ...validatedData,
+          code: teacherCode, // Use the generated or user-provided code
+          id: uuidv7(),
+          dateOfBirth
+        },
+        include: {
+          department: true,
+          degree: true
+        }
+      });
+
+      // Create user account for the teacher
+      const defaultPassword = process.env.DEFAULT_TEACHER_PASSWORD || '123123'; // Default password as requested
+      const hashedPassword = await bcrypt.hash(defaultPassword, 12);
+      
+      const newUser = await tx.user.create({
+        data: {
+          id: uuidv7(),
+          username: teacherCode, // Username is teacher code
+          password: hashedPassword,
+          role: 'TEACHER',
+          teacherId: newTeacher.id,
+          isActive: true
+        }
+      });
+
+      return { teacher: newTeacher, user: newUser };
     });
     
-    res.status(201).json({ data: newTeacher.id });
+    res.status(201).json({ 
+      data: result.teacher.id,
+      message: `Tạo giáo viên thành công. Tài khoản đăng nhập: ${teacherCode}, Mật khẩu mặc định: 123123`
+    });
   } catch (error) {
     if (error.name === 'ZodError') {
       const firstError = error.errors[0];

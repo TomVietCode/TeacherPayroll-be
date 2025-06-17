@@ -338,4 +338,80 @@ export const getCourseClassesBySemester = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// [GET] /api/course-classes/by-teacher/:teacherId/semester/:semesterId
+export const getCourseClassesByTeacherAndSemester = async (req, res, next) => {
+  try {
+    const { teacherId, semesterId } = req.params;
+    
+    // Get course classes assigned to the specific teacher for the semester
+    const courseClasses = await prisma.courseClass.findMany({
+      where: { 
+        semesterId,
+        assignments: {
+          some: {
+            teacherId
+          }
+        }
+      },
+      include: {
+        subject: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            credits: true,
+            totalPeriods: true
+          }
+        },
+        assignments: {
+          where: {
+            teacherId
+          },
+          select: {
+            teacher: {
+              select: {
+                id: true,
+                fullName: true,
+                code: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { subject: { name: 'asc' } },
+        { classNumber: 'asc' }
+      ]
+    });
+    
+    // Group by subject
+    const groupedBySubject = courseClasses.reduce((acc, courseClass) => {
+      const subjectId = courseClass.subject.id;
+      
+      if (!acc[subjectId]) {
+        acc[subjectId] = {
+          subject: courseClass.subject,
+          classes: []
+        };
+      }
+      
+      acc[subjectId].classes.push({
+        id: courseClass.id,
+        code: courseClass.code,
+        name: courseClass.name,
+        studentCount: courseClass.studentCount,
+        maxStudents: courseClass.maxStudents,
+        classNumber: courseClass.classNumber,
+        teacher: courseClass.assignments[0]?.teacher || null
+      });
+      
+      return acc;
+    }, {});
+    
+    res.json({ data: Object.values(groupedBySubject) });
+  } catch (error) {
+    next(error);
+  }
 }; 
