@@ -52,9 +52,8 @@ export const getTeacherYearlyPayrollReport = async (req, res, next) => {
       return res.status(404).json({ message: 'Chưa thiết lập định mức tiền theo tiết cho năm học này' });
     }
     
-    if (!teacherCoefficient) {
-      return res.status(404).json({ message: 'Chưa thiết lập hệ số giáo viên cho bằng cấp này trong năm học' });
-    }
+    // Use default coefficient of 1.0 if not found
+    const teacherCoefficientValue = teacherCoefficient ? teacherCoefficient.coefficient : 1.0;
     
     if (!classCoefficient) {
       return res.status(404).json({ message: 'Chưa thiết lập hệ số lớp cho năm học này' });
@@ -103,7 +102,7 @@ export const getTeacherYearlyPayrollReport = async (req, res, next) => {
         const convertedPeriods = subject.totalPeriods * subject.coefficient * (1 + classCoeff);
         
         // Calculate class salary
-        const classSalary = convertedPeriods * hourlyRate.ratePerHour * teacherCoefficient.coefficient;
+        const classSalary = convertedPeriods * hourlyRate.ratePerHour * teacherCoefficientValue;
         
         semesterPeriods += subject.totalPeriods;
         semesterConvertedPeriods += convertedPeriods;
@@ -140,7 +139,7 @@ export const getTeacherYearlyPayrollReport = async (req, res, next) => {
         },
         academicYear,
         coefficients: {
-          teacherCoefficient: teacherCoefficient.coefficient,
+          teacherCoefficient: teacherCoefficientValue,
           hourlyRate: hourlyRate.ratePerHour,
           standardStudentRange: classCoefficient.standardStudentRange
         },
@@ -221,47 +220,48 @@ export const getDepartmentPayrollReport = async (req, res, next) => {
       let teacherConvertedPeriods = 0;
       let teacherSalary = 0;
       
-      if (teacherCoefficient) {
-        // Get assignments for the teacher
-        const assignments = await prisma.teacherAssignment.findMany({
-          where: {
-            teacherId: teacher.id,
-            courseClass: {
-              semester: semesterFilter
-            }
-          },
-          include: {
-            courseClass: {
-              include: {
-                subject: true,
-                semester: true
-              }
+      // Use default coefficient of 1.0 if not found
+      const teacherCoefficientValue = teacherCoefficient ? teacherCoefficient.coefficient : 1.0;
+      
+      // Get assignments for the teacher
+      const assignments = await prisma.teacherAssignment.findMany({
+        where: {
+          teacherId: teacher.id,
+          courseClass: {
+            semester: semesterFilter
+          }
+        },
+        include: {
+          courseClass: {
+            include: {
+              subject: true,
+              semester: true
             }
           }
-        });
-        
-        teacherClasses = assignments.length;
-        
-        for (const assignment of assignments) {
-          const courseClass = assignment.courseClass;
-          const subject = courseClass.subject;
-          
-          // Calculate class coefficient
-          const classCoeff = calculateClassCoefficient(
-            courseClass.studentCount,
-            classCoefficient.standardStudentRange
-          );
-          
-          // Calculate converted periods
-          const convertedPeriods = subject.totalPeriods * subject.coefficient * (1 + classCoeff);
-          
-          // Calculate class salary
-          const classSalary = convertedPeriods * hourlyRate.ratePerHour * teacherCoefficient.coefficient;
-          
-          teacherPeriods += subject.totalPeriods;
-          teacherConvertedPeriods += convertedPeriods;
-          teacherSalary += classSalary;
         }
+      });
+      
+      teacherClasses = assignments.length;
+      
+      for (const assignment of assignments) {
+        const courseClass = assignment.courseClass;
+        const subject = courseClass.subject;
+        
+        // Calculate class coefficient
+        const classCoeff = calculateClassCoefficient(
+          courseClass.studentCount,
+          classCoefficient.standardStudentRange
+        );
+        
+        // Calculate converted periods
+        const convertedPeriods = subject.totalPeriods * subject.coefficient * (1 + classCoeff);
+        
+        // Calculate class salary
+        const classSalary = convertedPeriods * hourlyRate.ratePerHour * teacherCoefficientValue;
+        
+        teacherPeriods += subject.totalPeriods;
+        teacherConvertedPeriods += convertedPeriods;
+        teacherSalary += classSalary;
       }
       
       // Luôn thêm giáo viên vào báo cáo, kể cả khi không có dữ liệu
@@ -270,7 +270,7 @@ export const getDepartmentPayrollReport = async (req, res, next) => {
         teacherName: teacher.fullName,
         teacherCode: teacher.code,
         degree: teacher.degree,
-        teacherCoefficient: teacherCoefficient ? teacherCoefficient.coefficient : 0,
+        teacherCoefficient: teacherCoefficientValue,
         classCount: teacherClasses,
         totalPeriods: teacherPeriods,
         totalConvertedPeriods: Math.round(teacherConvertedPeriods * 10) / 10,
@@ -394,24 +394,25 @@ export const getSchoolPayrollReport = async (req, res, next) => {
           }
         });
         
-        if (teacherCoefficient) {
-          // Calculate class coefficient
-          const classCoeff = calculateClassCoefficient(
-            courseClass.studentCount,
-            classCoefficient.standardStudentRange
-          );
-          
-          // Calculate converted periods
-          const convertedPeriods = subject.totalPeriods * subject.coefficient * (1 + classCoeff);
-          
-          // Calculate class salary
-          const classSalary = convertedPeriods * hourlyRate.ratePerHour * teacherCoefficient.coefficient;
-          
-          departmentClasses += 1;
-          departmentPeriods += subject.totalPeriods;
-          departmentConvertedPeriods += convertedPeriods;
-          departmentSalary += classSalary;
-        }
+        // Use default coefficient of 1.0 if not found
+        const teacherCoefficientValue = teacherCoefficient ? teacherCoefficient.coefficient : 1.0;
+        
+        // Calculate class coefficient
+        const classCoeff = calculateClassCoefficient(
+          courseClass.studentCount,
+          classCoefficient.standardStudentRange
+        );
+        
+        // Calculate converted periods
+        const convertedPeriods = subject.totalPeriods * subject.coefficient * (1 + classCoeff);
+        
+        // Calculate class salary
+        const classSalary = convertedPeriods * hourlyRate.ratePerHour * teacherCoefficientValue;
+        
+        departmentClasses += 1;
+        departmentPeriods += subject.totalPeriods;
+        departmentConvertedPeriods += convertedPeriods;
+        departmentSalary += classSalary;
       }
       
       // Luôn thêm khoa vào báo cáo, kể cả khi không có dữ liệu

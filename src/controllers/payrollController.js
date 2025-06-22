@@ -67,11 +67,8 @@ export const calculatePayroll = async (req, res, next) => {
       }
     });
     
-    if (!teacherCoefficient) {
-      return res.status(404).json({ 
-        message: 'Vui lòng thiết lập hệ số giáo viên cho bằng cấp này trong năm học trước' 
-      });
-    }
+    // Use default coefficient of 1.0 if not found
+    const teacherCoefficientValue = teacherCoefficient ? teacherCoefficient.coefficient : 1.0;
     
     // Get class coefficient setting for the academic year
     const classCoefficient = await prisma.classCoefficient.findUnique({
@@ -129,7 +126,7 @@ export const calculatePayroll = async (req, res, next) => {
       const convertedPeriods = subject.totalPeriods * (subject.coefficient + dynamicClassCoeff);
       
       // Calculate total salary for this class
-      const classSalary = convertedPeriods * teacherCoefficient.coefficient * hourlyRate.ratePerHour;
+      const classSalary = convertedPeriods * teacherCoefficientValue * hourlyRate.ratePerHour;
       
       return {
         courseClassId: courseClass.id,
@@ -163,7 +160,7 @@ export const calculatePayroll = async (req, res, next) => {
         academicYear: semester.academicYear
       },
       coefficients: {
-        teacherCoefficient: teacherCoefficient.coefficient,
+        teacherCoefficient: teacherCoefficientValue,
         hourlyRate: hourlyRate.ratePerHour,
         standardStudentRange: classCoefficient.standardStudentRange
       },
@@ -186,7 +183,7 @@ export const getAcademicYearsWithPayrollData = async (req, res, next) => {
     const academicYears = await prisma.semester.findMany({
       select: { academicYear: true },
       distinct: ['academicYear'],
-      orderBy: { academicYear: 'desc' }
+      orderBy: { academicYear: 'asc' }
     });
     
     const yearsList = academicYears.map(item => item.academicYear);

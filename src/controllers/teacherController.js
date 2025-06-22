@@ -120,7 +120,7 @@ export const createTeacher = async (req, res, next) => {
       });
 
       // Create user account for the teacher
-      const defaultPassword = process.env.DEFAULT_TEACHER_PASSWORD || '123123'; // Default password as requested
+      const defaultPassword = process.env.DEFAULT_TEACHER_PASSWORD || '1'; // Default password as requested
       const hashedPassword = await bcrypt.hash(defaultPassword, 12);
       
       const newUser = await tx.user.create({

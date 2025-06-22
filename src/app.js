@@ -3,6 +3,8 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { PrismaClient } from '@prisma/client';
 import errorHandler from './middlewares/errorHandler.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Routes
 import degreeRoutes from './routes/degreeRoutes.js';

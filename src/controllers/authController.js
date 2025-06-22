@@ -5,8 +5,8 @@ import { loginSchema } from '../validators/authValidator.js';
 
 const prisma = new PrismaClient();
 
-// JWT Secret (should be in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+// JWT Secret 
+const JWT_SECRET = process.env.JWT_SECRET || 'xinchao123';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // [POST] /api/auth/login
@@ -14,7 +14,6 @@ export const login = async (req, res, next) => {
   try {
     const validatedData = loginSchema.parse(req.body);
     const { username, password, role } = validatedData;
-
     // Find user by username and role
     const user = await prisma.user.findFirst({
       where: {
@@ -121,10 +120,7 @@ export const login = async (req, res, next) => {
 
 // [POST] /api/auth/logout
 export const logout = async (req, res, next) => {
-  try {
-    // For JWT, logout is typically handled on client-side by removing token
-    // But we can blacklist tokens if needed (requires additional setup)
-    
+  try {    
     res.status(200).json({
       success: true,
       message: 'Đăng xuất thành công'
