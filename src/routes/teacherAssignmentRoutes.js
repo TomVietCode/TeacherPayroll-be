@@ -7,6 +7,7 @@ import {
   updateAssignment,
   deleteAssignment,
   getUnassignedClasses,
+  getAllClassesForAssignment,
   getTeacherWorkload
 } from '../controllers/teacherAssignmentController.js';
 
@@ -24,6 +25,7 @@ router.post('/bulk', bulkAssignment);
 
 // Helper endpoints for bulk assignment
 router.get('/unassigned/classes', getUnassignedClasses);
+router.get('/all/classes', getAllClassesForAssignment);
 router.get('/teacher/:teacherId/workload', getTeacherWorkload);
 
 export default router; 

@@ -199,10 +199,7 @@ export const createAssignment = async (req, res) => {
 
     // Check if course class exists
     const courseClass = await prisma.courseClass.findUnique({
-      where: { id: validatedData.courseClassId },
-      include: {
-        assignments: true
-      }
+      where: { id: validatedData.courseClassId }
     });
     if (!courseClass) {
       return res.status(404).json({
@@ -211,20 +208,16 @@ export const createAssignment = async (req, res) => {
       });
     }
 
-    // Check if course class already has a teacher assigned
-    if (courseClass.assignments.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'This course class already has a teacher assigned'
-      });
-    }
-
-    // Check if assignment already exists
-    const existingAssignment = await prisma.teacherAssignment.findUnique({
+    // Check if course class already has any teacher assigned
+    const existingAssignment = await prisma.teacherAssignment.findFirst({
       where: {
-        teacherId_courseClassId: {
-          teacherId: validatedData.teacherId,
-          courseClassId: validatedData.courseClassId
+        courseClassId: validatedData.courseClassId
+      },
+      include: {
+        teacher: {
+          select: {
+            fullName: true
+          }
         }
       }
     });
@@ -232,7 +225,7 @@ export const createAssignment = async (req, res) => {
     if (existingAssignment) {
       return res.status(409).json({
         success: false,
-        message: 'Teacher is already assigned to this course class'
+        message: `This course class is already assigned to ${existingAssignment.teacher.fullName}`
       });
     }
 
@@ -310,44 +303,110 @@ export const bulkAssignment = async (req, res) => {
       });
     }
 
-    // Check for existing assignments
+    // Check for existing assignments and prepare for updates/creates
     const existingAssignments = await prisma.teacherAssignment.findMany({
       where: {
-        teacherId: validatedData.teacherId,
         courseClassId: { in: validatedData.courseClassIds }
+      },
+      include: {
+        teacher: {
+          select: {
+            fullName: true
+          }
+        },
+        courseClass: {
+          select: {
+            name: true
+          }
+        }
       }
     });
 
-    if (existingAssignments.length > 0) {
-      const existingClassIds = existingAssignments.map(a => a.courseClassId);
-      const conflictClasses = courseClasses.filter(c => existingClassIds.includes(c.id));
-      
-      return res.status(409).json({
-        success: false,
-        message: 'Teacher is already assigned to some of these classes',
-        conflictClasses: conflictClasses.map(c => ({ id: c.id, name: c.name }))
-      });
-    }
-
-    // Create bulk assignments
-    const assignmentData = validatedData.courseClassIds.map(courseClassId => ({
-      id: uuidv7(),
-      teacherId: validatedData.teacherId,
-      courseClassId,
-      assignedDate: new Date(),
-    }));
-
-    const assignments = await prisma.teacherAssignment.createMany({
-      data: assignmentData
+    const existingAssignmentMap = new Map();
+    existingAssignments.forEach(assignment => {
+      existingAssignmentMap.set(assignment.courseClassId, assignment);
     });
 
-    res.status(201).json({
+    const classesToUpdate = [];
+    const classesToCreate = [];
+    const replacedTeachers = [];
+
+    validatedData.courseClassIds.forEach(courseClassId => {
+      const existingAssignment = existingAssignmentMap.get(courseClassId);
+      if (existingAssignment) {
+        // If same teacher, skip
+        if (existingAssignment.teacherId === validatedData.teacherId) {
+          return;
+        }
+        // If different teacher, prepare for update
+        classesToUpdate.push({
+          assignmentId: existingAssignment.id,
+          courseClassId,
+          oldTeacher: existingAssignment.teacher.fullName,
+          className: existingAssignment.courseClass.name
+        });
+      } else {
+        // New assignment
+        classesToCreate.push(courseClassId);
+      }
+    });
+
+    // Process updates and creates
+    let updatedCount = 0;
+    let createdCount = 0;
+
+    // Update existing assignments
+    if (classesToUpdate.length > 0) {
+      for (const updateInfo of classesToUpdate) {
+        await prisma.teacherAssignment.update({
+          where: { id: updateInfo.assignmentId },
+          data: {
+            teacherId: validatedData.teacherId,
+            assignedDate: new Date(),
+          }
+        });
+        replacedTeachers.push({
+          className: updateInfo.className,
+          oldTeacher: updateInfo.oldTeacher
+        });
+        updatedCount++;
+      }
+    }
+
+    // Create new assignments
+    if (classesToCreate.length > 0) {
+      const assignmentData = classesToCreate.map(courseClassId => ({
+        id: uuidv7(),
+        teacherId: validatedData.teacherId,
+        courseClassId,
+        assignedDate: new Date(),
+      }));
+
+      const newAssignments = await prisma.teacherAssignment.createMany({
+        data: assignmentData
+      });
+      createdCount = newAssignments.count;
+    }
+
+    const totalProcessed = updatedCount + createdCount;
+    let message = `Successfully processed ${totalProcessed} assignments`;
+    if (updatedCount > 0 && createdCount > 0) {
+      message += ` (${createdCount} new, ${updatedCount} updated)`;
+    } else if (updatedCount > 0) {
+      message += ` (${updatedCount} updated)`;
+    } else if (createdCount > 0) {
+      message += ` (${createdCount} new)`;
+    }
+
+    res.status(200).json({
       success: true,
-      message: `Successfully assigned teacher to ${assignments.count} classes`,
+      message,
       data: {
-        assignedCount: assignments.count,
+        totalProcessed,
+        createdCount,
+        updatedCount,
         teacherName: teacher.fullName,
-        classCount: validatedData.courseClassIds.length
+        replacedTeachers: replacedTeachers.length > 0 ? replacedTeachers : undefined
       }
     });
   } catch (error) {
@@ -550,6 +609,78 @@ export const getUnassignedClasses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch unassigned classes'
+    });
+  }
+};
+
+// Get all course classes with assignment status for bulk assignment
+export const getAllClassesForAssignment = async (req, res) => {
+  try {
+    const validatedQuery = assignmentQuerySchema.parse(req.query);
+    
+    const where = {};
+
+    if (validatedQuery.semesterId) where.semesterId = validatedQuery.semesterId;
+    if (validatedQuery.subjectId) where.subjectId = validatedQuery.subjectId;
+    if (validatedQuery.departmentId) {
+      where.subject = { departmentId: validatedQuery.departmentId };
+    }
+
+    const allClasses = await prisma.courseClass.findMany({
+      where,
+      include: {
+        subject: {
+          select: {
+            name: true,
+            credits: true,
+            totalPeriods: true,
+            department: {
+              select: { fullName: true, shortName: true }
+            }
+          }
+        },
+        semester: {
+          select: {
+            termNumber: true,
+            academicYear: true,
+            isSupplementary: true
+          }
+        },
+        assignments: {
+          include: {
+            teacher: {
+              select: {
+                fullName: true,
+                code: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { semester: { startDate: 'desc' } },
+        { subject: { name: 'asc' } },
+        { classNumber: 'asc' }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: allClasses,
+      count: allClasses.length
+    });
+  } catch (error) {
+    console.error('Error fetching all classes for assignment:', error);
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid query parameters',
+        errors: error.errors
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch classes for assignment'
     });
   }
 };
