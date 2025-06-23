@@ -387,4 +387,341 @@ export const exportCourseClassStatisticsToExcel = async (data, academicYear) => 
   // Tạo buffer
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer;
+};
+
+/**
+ * Xuất báo cáo tiền dạy giáo viên theo năm ra file Excel
+ * @param {Object} reportData Dữ liệu báo cáo tiền dạy giáo viên
+ */
+export const exportTeacherYearlyPayrollToExcel = async (reportData) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Báo cáo tiền dạy giáo viên');
+  
+  // Thêm tiêu đề báo cáo
+  worksheet.mergeCells('A1:F3');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = `BÁO CÁO TIỀN DẠY GIÁO VIÊN THEO NĂM\n${reportData.teacher.fullName} (${reportData.teacher.code})\nNăm học: ${reportData.academicYear}`;
+  titleCell.font = { bold: true, size: 14 };
+  titleCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  
+  // Thêm thông tin giáo viên
+  worksheet.addRow([]);
+  worksheet.addRow(['Thông tin giáo viên:']);
+  worksheet.addRow(['Mã giáo viên:', reportData.teacher.code]);
+  worksheet.addRow(['Họ và tên:', reportData.teacher.fullName]);
+  worksheet.addRow(['Bằng cấp:', reportData.teacher.degree.fullName]);
+  worksheet.addRow(['Khoa:', reportData.teacher.department.fullName]);
+  worksheet.addRow([]);
+  
+  // Thêm thông tin hệ số
+  worksheet.addRow(['Các hệ số áp dụng:']);
+  worksheet.addRow(['Hệ số giáo viên:', reportData.coefficients.teacherCoefficient]);
+  worksheet.addRow(['Đơn giá theo tiết:', reportData.coefficients.hourlyRate.toLocaleString('vi-VN') + ' VNĐ']);
+  worksheet.addRow(['Quy chuẩn sĩ số:', reportData.coefficients.standardStudentRange]);
+  worksheet.addRow([]);
+  
+  // Tiêu đề bảng
+  const headerRow = worksheet.addRow([
+    'STT', 'Kỳ học', 'Số lớp', 'Tổng số tiết', 'Số tiết quy đổi', 'Tiền dạy (VNĐ)'
+  ]);
+  headerRow.font = { bold: true };
+  headerRow.alignment = { horizontal: 'center' };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+  
+  // Định dạng cột
+  worksheet.columns = [
+    { key: 'stt', width: 8 },
+    { key: 'semester', width: 20 },
+    { key: 'classes', width: 12 },
+    { key: 'periods', width: 15 },
+    { key: 'convertedPeriods', width: 18 },
+    { key: 'salary', width: 20 }
+  ];
+  
+  // Thêm dữ liệu từng kỳ
+  reportData.semesters.forEach((semester, index) => {
+    worksheet.addRow([
+      index + 1,
+      semester.semesterName,
+      semester.classCount,
+      semester.totalPeriods,
+      semester.totalConvertedPeriods,
+      semester.totalSalary.toLocaleString('vi-VN')
+    ]);
+  });
+  
+  // Thêm hàng tổng kết
+  const summaryRow = worksheet.addRow([
+    '',
+    'TỔNG CỘNG',
+    reportData.summary.totalClasses,
+    reportData.summary.totalPeriods,
+    reportData.summary.totalConvertedPeriods,
+    reportData.summary.totalSalary.toLocaleString('vi-VN')
+  ]);
+  summaryRow.font = { bold: true };
+  summaryRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFEAA7' }
+  };
+  
+  // Định dạng border cho bảng
+  const lastRow = worksheet.rowCount;
+  const startDataRow = lastRow - reportData.semesters.length;
+  
+  for (let i = startDataRow; i <= lastRow; i++) {
+    for (let j = 1; j <= 6; j++) {
+      const cell = worksheet.getCell(i, j);
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      
+      // Căn giữa cho các cột số
+      if (j !== 2) {
+        cell.alignment = { horizontal: 'center' };
+      }
+    }
+  }
+  
+  // Tạo buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer;
+};
+
+/**
+ * Xuất báo cáo tiền dạy theo khoa ra file Excel
+ * @param {Object} reportData Dữ liệu báo cáo tiền dạy theo khoa
+ */
+export const exportDepartmentPayrollToExcel = async (reportData) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Báo cáo tiền dạy theo khoa');
+  
+  // Thêm tiêu đề báo cáo
+  const semesterInfo = reportData.semester 
+    ? `Kỳ ${reportData.semester.termNumber}${reportData.semester.isSupplementary ? ' (Phụ)' : ''}`
+    : 'Toàn năm học';
+  
+  worksheet.mergeCells('A1:H3');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = `BÁO CÁO TIỀN DẠY THEO KHOA\n${reportData.department.fullName}\n${semesterInfo} năm học ${reportData.academicYear}`;
+  titleCell.font = { bold: true, size: 14 };
+  titleCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  
+  // Thêm thông tin khoa
+  worksheet.addRow([]);
+  worksheet.addRow(['Thông tin khoa:']);
+  worksheet.addRow(['Tên khoa:', reportData.department.fullName]);
+  worksheet.addRow(['Năm học:', reportData.academicYear]);
+  if (reportData.semester) {
+    worksheet.addRow(['Kỳ học:', `Kỳ ${reportData.semester.termNumber}${reportData.semester.isSupplementary ? ' (Phụ)' : ''}`]);
+  }
+  worksheet.addRow([]);
+  
+  // Thêm thông tin hệ số
+  worksheet.addRow(['Các hệ số áp dụng:']);
+  worksheet.addRow(['Đơn giá theo tiết:', reportData.coefficients.hourlyRate.toLocaleString('vi-VN') + ' VNĐ']);
+  worksheet.addRow(['Quy chuẩn sĩ số:', reportData.coefficients.standardStudentRange]);
+  worksheet.addRow([]);
+  
+  // Tiêu đề bảng
+  const headerRow = worksheet.addRow([
+    'STT', 'Mã GV', 'Họ và tên', 'Bằng cấp', 'Hệ số GV', 'Số lớp', 'Tổng số tiết', 'Số tiết quy đổi', 'Tiền dạy (VNĐ)'
+  ]);
+  headerRow.font = { bold: true };
+  headerRow.alignment = { horizontal: 'center' };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+  
+  // Định dạng cột
+  worksheet.columns = [
+    { key: 'stt', width: 8 },
+    { key: 'teacherCode', width: 12 },
+    { key: 'teacherName', width: 25 },
+    { key: 'degree', width: 20 },
+    { key: 'coefficient', width: 12 },
+    { key: 'classes', width: 10 },
+    { key: 'periods', width: 15 },
+    { key: 'convertedPeriods', width: 18 },
+    { key: 'salary', width: 20 }
+  ];
+  
+  // Thêm dữ liệu giáo viên
+  reportData.teachers.forEach((teacher, index) => {
+    worksheet.addRow([
+      index + 1,
+      teacher.teacherCode,
+      teacher.teacherName,
+      teacher.degree.fullName,
+      teacher.teacherCoefficient,
+      teacher.classCount,
+      teacher.totalPeriods,
+      teacher.totalConvertedPeriods,
+      teacher.totalSalary.toLocaleString('vi-VN')
+    ]);
+  });
+  
+  // Thêm hàng tổng kết
+  const summaryRow = worksheet.addRow([
+    '',
+    '',
+    'TỔNG CỘNG',
+    '',
+    '',
+    reportData.summary.totalClasses,
+    reportData.summary.totalPeriods,
+    reportData.summary.totalConvertedPeriods,
+    reportData.summary.totalSalary.toLocaleString('vi-VN')
+  ]);
+  summaryRow.font = { bold: true };
+  summaryRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFEAA7' }
+  };
+  
+  // Định dạng border cho bảng
+  const lastRow = worksheet.rowCount;
+  const startDataRow = lastRow - reportData.teachers.length;
+  
+  for (let i = startDataRow; i <= lastRow; i++) {
+    for (let j = 1; j <= 9; j++) {
+      const cell = worksheet.getCell(i, j);
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      
+      // Căn giữa cho các cột số
+      if (j !== 3 && j !== 4) {
+        cell.alignment = { horizontal: 'center' };
+      }
+    }
+  }
+  
+  // Tạo buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer;
+};
+
+/**
+ * Xuất báo cáo tiền dạy toàn trường ra file Excel
+ * @param {Object} reportData Dữ liệu báo cáo tiền dạy toàn trường
+ */
+export const exportSchoolPayrollToExcel = async (reportData) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Báo cáo tiền dạy toàn trường');
+  
+  // Thêm tiêu đề báo cáo
+  const semesterInfo = reportData.semester 
+    ? `Kỳ ${reportData.semester.termNumber}${reportData.semester.isSupplementary ? ' (Phụ)' : ''}`
+    : 'Toàn năm học';
+  
+  worksheet.mergeCells('A1:F3');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = `BÁO CÁO TIỀN DẠY TOÀN TRƯỜNG\n${semesterInfo} năm học ${reportData.academicYear}`;
+  titleCell.font = { bold: true, size: 14 };
+  titleCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  
+  // Thêm thông tin chung
+  worksheet.addRow([]);
+  worksheet.addRow(['Thông tin báo cáo:']);
+  worksheet.addRow(['Năm học:', reportData.academicYear]);
+  if (reportData.semester) {
+    worksheet.addRow(['Kỳ học:', `Kỳ ${reportData.semester.termNumber}${reportData.semester.isSupplementary ? ' (Phụ)' : ''}`]);
+  }
+  worksheet.addRow([]);
+  
+  // Thêm thông tin hệ số
+  worksheet.addRow(['Các hệ số áp dụng:']);
+  worksheet.addRow(['Đơn giá theo tiết:', reportData.coefficients.hourlyRate.toLocaleString('vi-VN') + ' VNĐ']);
+  worksheet.addRow(['Quy chuẩn sĩ số:', reportData.coefficients.standardStudentRange]);
+  worksheet.addRow([]);
+  
+  // Tiêu đề bảng
+  const headerRow = worksheet.addRow([
+    'STT', 'Tên khoa', 'Số lớp', 'Tổng số tiết', 'Số tiết quy đổi', 'Tiền dạy (VNĐ)'
+  ]);
+  headerRow.font = { bold: true };
+  headerRow.alignment = { horizontal: 'center' };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+  
+  // Định dạng cột
+  worksheet.columns = [
+    { key: 'stt', width: 8 },
+    { key: 'departmentName', width: 30 },
+    { key: 'classes', width: 12 },
+    { key: 'periods', width: 15 },
+    { key: 'convertedPeriods', width: 18 },
+    { key: 'salary', width: 20 }
+  ];
+  
+  // Thêm dữ liệu từng khoa
+  reportData.departments.forEach((department, index) => {
+    worksheet.addRow([
+      index + 1,
+      department.departmentName,
+      department.classCount,
+      department.totalPeriods,
+      department.totalConvertedPeriods,
+      department.totalSalary.toLocaleString('vi-VN')
+    ]);
+  });
+  
+  // Thêm hàng tổng kết
+  const summaryRow = worksheet.addRow([
+    '',
+    'TỔNG CỘNG',
+    reportData.summary.totalClasses,
+    reportData.summary.totalPeriods,
+    reportData.summary.totalConvertedPeriods,
+    reportData.summary.totalSalary.toLocaleString('vi-VN')
+  ]);
+  summaryRow.font = { bold: true };
+  summaryRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFEAA7' }
+  };
+  
+  // Định dạng border cho bảng
+  const lastRow = worksheet.rowCount;
+  const startDataRow = lastRow - reportData.departments.length;
+  
+  for (let i = startDataRow; i <= lastRow; i++) {
+    for (let j = 1; j <= 6; j++) {
+      const cell = worksheet.getCell(i, j);
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      
+      // Căn giữa cho các cột số
+      if (j !== 2) {
+        cell.alignment = { horizontal: 'center' };
+      }
+    }
+  }
+  
+  // Tạo buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer;
 }; 

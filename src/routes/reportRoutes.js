@@ -2,18 +2,24 @@ import express from 'express';
 import {
   getTeacherYearlyPayrollReport,
   getDepartmentPayrollReport,
-  getSchoolPayrollReport
+  getSchoolPayrollReport,
+  exportTeacherYearlyPayrollReport,
+  exportDepartmentPayrollReport,
+  exportSchoolPayrollReport
 } from '../controllers/reportController.js';
 
 const router = express.Router();
 
-// UC4.1: Báo cáo tiền dạy của giáo viên trong một năm
-router.get('/teacher/:teacherId/academic-year/:academicYear', getTeacherYearlyPayrollReport);
 
-// UC4.2: Báo cáo tiền dạy của giáo viên một khoa
-router.get('/department/:departmentId/academic-year/:academicYear', getDepartmentPayrollReport);
 
-// UC4.3: Báo cáo tiền dạy của giáo viên toàn trường
-router.get('/school/academic-year/:academicYear', getSchoolPayrollReport);
+// Regular report routes
+router.get('/teacher/:teacherId/yearly/:academicYear', getTeacherYearlyPayrollReport);
+router.get('/department/:departmentId/yearly/:academicYear', getDepartmentPayrollReport);
+router.get('/school/yearly/:academicYear', getSchoolPayrollReport);
+
+// Excel export routes
+router.get('/teacher/:teacherId/yearly/:academicYear/export', exportTeacherYearlyPayrollReport);
+router.get('/department/:departmentId/yearly/:academicYear/export', exportDepartmentPayrollReport);
+router.get('/school/yearly/:academicYear/export', exportSchoolPayrollReport);
 
 export default router; 
