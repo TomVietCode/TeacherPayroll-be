@@ -14,7 +14,7 @@ export const getAllTeachers = async (req, res, next) => {
         department: true,
         degree: true
       },
-      orderBy: { fullName: 'asc' }
+      orderBy: { createdAt: 'desc' }
     });
     res.json({ data: teachers });
   } catch (error) {
