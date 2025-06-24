@@ -41,7 +41,14 @@ export const getAllCourseClasses = async (req, res, next) => {
             code: true,
             credits: true,
             coefficient: true,
-            totalPeriods: true
+            totalPeriods: true,
+            department: {
+              select: {
+                id: true,
+                shortName: true,
+                fullName: true
+              }
+            }
           }
         },
         semester: {
@@ -92,7 +99,14 @@ export const getCourseClassById = async (req, res, next) => {
             code: true,
             credits: true,
             coefficient: true,
-            totalPeriods: true
+            totalPeriods: true,
+            department: {
+              select: {
+                id: true,
+                shortName: true,
+                fullName: true
+              }
+            }
           }
         },
         semester: {
@@ -289,7 +303,14 @@ export const getCourseClassesBySemester = async (req, res, next) => {
           select: {
             id: true,
             name: true,
-            code: true
+            code: true,
+            department: {
+              select: {
+                id: true,
+                shortName: true,
+                fullName: true
+              }
+            }
           }
         },
         assignments: {
@@ -362,7 +383,14 @@ export const getCourseClassesByTeacherAndSemester = async (req, res, next) => {
             name: true,
             code: true,
             credits: true,
-            totalPeriods: true
+            totalPeriods: true,
+            department: {
+              select: {
+                id: true,
+                shortName: true,
+                fullName: true
+              }
+            }
           }
         },
         assignments: {
