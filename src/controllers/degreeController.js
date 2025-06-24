@@ -126,7 +126,7 @@ export const deleteDegree = async (req, res, next) => {
     });
     
     if (teachersWithDegree > 0) {
-      return res.status(400).json({ message: 'Cannot delete because the degree is being used by teachers' });
+      return res.status(400).json({ message: 'Không thể xoá vì đang có giáo viên thuộc bằng cấp này' });
     }
     
     await prisma.degree.delete({

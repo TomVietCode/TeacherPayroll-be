@@ -36,6 +36,64 @@ export const getAllAssignments = async (req, res) => {
       }
     }
 
+    // Add search functionality
+    if (validatedQuery.search) {
+      const searchConditions = [];
+      
+      // Search in course class name and code
+      searchConditions.push({
+        courseClass: {
+          name: {
+            contains: validatedQuery.search
+          }
+        }
+      });
+      
+      searchConditions.push({
+        courseClass: {
+          code: {
+            contains: validatedQuery.search
+          }
+        }
+      });
+      
+      // Search in subject name
+      searchConditions.push({
+        courseClass: {
+          subject: {
+            name: {
+              contains: validatedQuery.search
+            }
+          }
+        }
+      });
+      
+      // Search in teacher full name if not filtering by specific teacher
+      if (!validatedQuery.teacherId) {
+        searchConditions.push({
+          teacher: {
+            fullName: {
+              contains: validatedQuery.search
+            }
+          }
+        });
+      }
+      
+      // Combine search with existing filters using AND
+      if (Object.keys(where).length > 0) {
+        where.AND = [
+          { ...where },
+          { OR: searchConditions }
+        ];
+        // Remove the original filters as they're now in AND clause
+        if (where.teacherId) delete where.teacherId;
+        if (where.courseClassId) delete where.courseClassId;
+        if (where.courseClass) delete where.courseClass;
+      } else {
+        where.OR = searchConditions;
+      }
+    }
+
     const [assignments, total] = await Promise.all([
       prisma.teacherAssignment.findMany({
         where,
@@ -211,7 +269,7 @@ export const createAssignment = async (req, res) => {
     // Check if course class already has any teacher assigned
     const existingAssignment = await prisma.teacherAssignment.findFirst({
       where: {
-        courseClassId: validatedData.courseClassId
+          courseClassId: validatedData.courseClassId
       },
       include: {
         teacher: {
@@ -376,15 +434,15 @@ export const bulkAssignment = async (req, res) => {
     // Create new assignments
     if (classesToCreate.length > 0) {
       const assignmentData = classesToCreate.map(courseClassId => ({
-        id: uuidv7(),
-        teacherId: validatedData.teacherId,
-        courseClassId,
-        assignedDate: new Date(),
-      }));
+      id: uuidv7(),
+      teacherId: validatedData.teacherId,
+      courseClassId,
+      assignedDate: new Date(),
+    }));
 
       const newAssignments = await prisma.teacherAssignment.createMany({
-        data: assignmentData
-      });
+      data: assignmentData
+    });
       createdCount = newAssignments.count;
     }
 

@@ -387,7 +387,7 @@ export const exportCourseClassStatisticsToExcel = async (data, academicYear) => 
   // Tạo buffer
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer;
-};
+}; 
 
 /**
  * Xuất báo cáo tiền dạy giáo viên theo năm ra file Excel

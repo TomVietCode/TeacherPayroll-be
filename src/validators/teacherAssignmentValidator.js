@@ -27,6 +27,7 @@ export const assignmentQuerySchema = z.object({
   semesterId: z.string().uuid().optional(),
   subjectId: z.string().uuid().optional(),
   departmentId: z.string().uuid().optional(),
+  search: z.string().optional(),
   page: z.string().optional().refine((val) => {
     if (!val) return true;
     const num = parseInt(val);

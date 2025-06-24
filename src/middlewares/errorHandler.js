@@ -11,7 +11,7 @@ function errorHandler(err, req, res, next) {
     switch (err.code) {
       case 'P2002': // Unique constraint violation (duplicate unique value)
         return res.status(400).json({
-          message: 'Data violates unique constraint',
+          message: 'Dữ liệu đã tồn tại',
           error: err.meta
         });
       case 'P2025': // Record not found
@@ -21,7 +21,7 @@ function errorHandler(err, req, res, next) {
         });
       case 'P2003': // Foreign key constraint violation
         return res.status(400).json({
-          message: 'Foreign key constraint violation',
+          message: 'Dữ liệu không hợp lệ',
           error: err.meta
         });
       default:

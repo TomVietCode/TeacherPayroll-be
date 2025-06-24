@@ -26,10 +26,16 @@ export const createTeacherSchema = z.object({
     .optional()
     .nullable(),
   email: z.string()
-    .email('Invalid email format')
     .max(100, 'Email cannot exceed 100 characters')
     .optional()
-    .nullable(),
+    .nullable()
+    .refine(
+      (value) => {
+        if (value === null || value === undefined || value === '') return true; 
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      },
+      { message: 'Invalid email format' }
+    ),
   departmentId: z.string()
     .min(1, 'Department is required'),
   degreeId: z.string()

@@ -126,7 +126,7 @@ export const deleteDepartment = async (req, res, next) => {
     });
     
     if (teachersWithDepartment > 0) {
-      return res.status(400).json({ message: 'Cannot delete because the department has teachers' });
+      return res.status(400).json({ message: 'Không thể xoá vì đang có giáo viên thuộc khoa này' });
     }
     
     await prisma.department.delete({
